@@ -38,6 +38,12 @@ copilot plugin install agentic-sdlc@ent-agent-plugins
 copilot plugin list
 ```
 
+Alternatively, install the plugin directly without adding the marketplace:
+
+```bash
+copilot plugin install devcopilotdemo/ent-agent-plugins:plugins/agentic-sdlc
+```
+
 For an enterprise-rollout talking point, show that the same thing can be pushed to every
 developer through `managed-settings.json` rather than installed by hand:
 
