@@ -1,32 +1,17 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { useQuery } from 'react-query';
-import { api } from '../../../api/config';
+import { fetchProducts, PRODUCTS_QUERY_KEY, type Product } from '../../../api/products';
+import { useCart } from '../../../context/CartContext';
 import { useTheme } from '../../../context/ThemeContext';
-
-interface Product {
-  productId: number;
-  name: string;
-  description: string;
-  price: number;
-  imgName: string;
-  sku: string;
-  unit: string;
-  supplierId: number;
-  discount?: number;
-}
-
-const fetchProducts = async (): Promise<Product[]> => {
-  const { data } = await axios.get(`${api.baseURL}${api.endpoints.products}`);
-  return data;
-};
 
 export default function Products() {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const { data: products, isLoading, error } = useQuery('products', fetchProducts);
+  const [cartAnnouncement, setCartAnnouncement] = useState('');
+  const { data: products, isLoading, error } = useQuery(PRODUCTS_QUERY_KEY, fetchProducts);
+  const { addItem } = useCart();
   const { darkMode } = useTheme();
 
   const filteredProducts = products?.filter(product => 
@@ -43,13 +28,14 @@ export default function Products() {
 
   const handleAddToCart = (productId: number) => {
     const quantity = quantities[productId] || 0;
-    if (quantity > 0) {
-      // TODO: Implement cart functionality
-      alert(`Added ${quantity} items to cart`);
+    const product = products?.find(candidate => candidate.productId === productId);
+    if (quantity > 0 && product) {
+      addItem(product, quantity);
       setQuantities(prev => ({
         ...prev,
         [productId]: 0
       }));
+      setCartAnnouncement(`${quantity} ${product.name} added to cart.`);
     }
   };
 
@@ -85,6 +71,17 @@ export default function Products() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col space-y-6">
           <h1 className={`text-3xl font-bold ${darkMode ? 'text-light' : 'text-gray-800'} transition-colors duration-300`}>Products</h1>
+          <div className="min-h-10">
+            {cartAnnouncement && (
+              <p
+                className={`rounded-md border px-3 py-2 text-sm ${darkMode ? 'border-green-700 bg-green-950/30 text-green-200' : 'border-green-200 bg-green-50 text-green-800'}`}
+                role="status"
+                aria-live="polite"
+              >
+                {cartAnnouncement}
+              </p>
+            )}
+          </div>
           
           <div className="relative">
             <input
@@ -145,6 +142,7 @@ export default function Products() {
                     <div className="flex items-center justify-between">
                       <div className={`flex items-center space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-lg p-1 transition-colors duration-300`}>
                         <button 
+                          type="button"
                           onClick={() => handleQuantityChange(product.productId, -1)}
                           className={`w-8 h-8 flex items-center justify-center ${darkMode ? 'text-light' : 'text-gray-700'} hover:text-primary transition-colors duration-300`}
                           aria-label={`Decrease quantity of ${product.name}`}
@@ -160,6 +158,7 @@ export default function Products() {
                           {quantities[product.productId] || 0}
                         </span>
                         <button 
+                          type="button"
                           onClick={() => handleQuantityChange(product.productId, 1)}
                           className={`w-8 h-8 flex items-center justify-center ${darkMode ? 'text-light' : 'text-gray-700'} hover:text-primary transition-colors duration-300`}
                           aria-label={`Increase quantity of ${product.name}`}
@@ -169,6 +168,7 @@ export default function Products() {
                         </button>
                       </div>
                       <button 
+                        type="button"
                         onClick={() => handleAddToCart(product.productId)}
                         className={`px-4 py-2 rounded-lg transition-colors ${
                           quantities[product.productId] 
@@ -199,6 +199,7 @@ export default function Products() {
           >
             <div className="flex justify-end">
               <button 
+                type="button"
                 onClick={() => setShowModal(false)}
                 className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'} transition-colors duration-300`}
               >
