@@ -19,10 +19,11 @@ The narrative arc is deliberate:
 | 5 | GHAS: push protection and secret scanning | 5 min | Platform-side secret controls |
 | 6 | GHAS: CodeQL and Copilot Autofix | 8 min | Vulnerability detection and AI remediation |
 | 7 | GHAS: Dependabot | 5 min | Vulnerable dependency, automated PR |
-| 8 | Code quality and review | 5 min | Copilot code review, `ent-tester` |
+| 8 | Copilot code review catches non-compliant code | 6 min | `copilot-instructions.md`, path-scoped instructions, Copilot code review |
+| 9 | Code quality and review | 5 min | Copilot code review, `ent-tester` |
 
 You do not have to run all of them. Scenarios 1 to 2 are the core story; 3 to 4 are the plugin
-differentiator; 5 to 8 are the GHAS layer. Pick according to your audience and time.
+differentiator; 5 to 9 are the GHAS layer. Pick according to your audience and time.
 
 ---
 
@@ -383,7 +384,74 @@ backlogs of existing debt rather than only new code.
 
 ---
 
-## Scenario 8: Code quality and review
+## Scenario 8: Copilot code review catches non-compliant code
+
+**Point to make:** the instruction files created for this repo
+([.github/copilot-instructions.md](.github/copilot-instructions.md),
+[.github/instructions/api.instructions.md](.github/instructions/api.instructions.md),
+[.github/instructions/frontend.instructions.md](.github/instructions/frontend.instructions.md))
+are not just for chat — Copilot code review reads them too, and enforces the same rules on a
+pull request whether a human or an agent wrote the diff.
+
+### Set the trap
+
+On a scratch branch, deliberately write code that violates a couple of the checklist items in
+the new instructions, on both sides of the stack:
+
+```text
+Add a GET /api/products/:id/discount-preview route in api/src/routes/product.ts that
+takes a discount percentage as a query param and returns the discounted price, using
+`any` for the request handler types and without validating the id or the discount value.
+
+On the frontend, add a quick "recently viewed" widget to Products.tsx that fetches
+/api/products directly with a hard-coded localhost URL inside a useEffect, with its own
+loading state instead of react-query, and an icon-only button with no aria-label.
+```
+
+This mirrors exactly the kind of shortcut a time-pressured PR takes: an unvalidated `:id`,
+an `any`-typed handler, a hard-coded URL, a hand-rolled fetch effect instead of `react-query`,
+and a missing accessibility label — every one of them called out explicitly in
+`api.instructions.md` and `frontend.instructions.md`.
+
+Push the branch and open a pull request.
+
+### Trigger the review
+
+Request a review from **Copilot** on the pull request (or, locally, ask the agent to review
+using the same instructions):
+
+```text
+@ent-tester Review this diff against .github/copilot-instructions.md,
+.github/instructions/api.instructions.md, and .github/instructions/frontend.instructions.md,
+and list every violation with the specific rule it breaks.
+```
+
+### What to show in the output
+
+- Each finding **cites the specific checklist item**, not a vague "consider improving this" —
+  e.g. "unvalidated path param, see API review checklist #1" or "hard-coded API URL, should go
+  through `api/config.ts`, see frontend review checklist #4".
+- The review is **scoped by path**: API violations are judged against `api.instructions.md`,
+  frontend violations against `frontend.instructions.md`, because both carry an `applyTo`
+  front-matter pattern matching their workspace.
+- Contrast with a generic review comment like "add error handling" — these comments are
+  actionable because they point at a concrete, pre-agreed convention already in the repo.
+
+### Remediate on camera
+
+```text
+Fix every violation the review flagged, following the patterns in the existing
+routes and components.
+```
+
+Show the follow-up diff: the `:id` and query param now validated with `Number.isFinite`, the
+handler typed against the `Product` interface instead of `any`, the URL routed through
+`api/config.ts`, the fetch moved to `useQuery`, and an `aria-label` added to the button. Re-run
+the review (or re-request it) and show it comes back clean.
+
+---
+
+## Scenario 9: Code quality and review
 
 **Point to make:** the loop closes with review, and review is also assisted.
 
@@ -425,7 +493,7 @@ Land these four sentences:
 | Audience | Run |
 | --- | --- |
 | Executive, 15 min | Scenarios 1, 2, and 3 |
-| Developer, 30 min | Scenarios 1, 2, 3, 4, and 6 |
+| Developer, 30 min | Scenarios 1, 2, 3, 4, 6, and 8 |
 | Security, 30 min | Scenarios 3, 4, 5, 6, and 7 |
 | Full, 60 min | All of them |
 
