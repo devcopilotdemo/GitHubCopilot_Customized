@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -11,5 +12,9 @@ export default defineConfig({
   },
   define: {
     'process.env.CODESPACE_NAME': JSON.stringify(process.env.CODESPACE_NAME),
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
   }
 })
