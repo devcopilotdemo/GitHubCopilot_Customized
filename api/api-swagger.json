@@ -8,7 +8,11 @@
     "servers": [
         {
             "url": "http://localhost:3000",
-            "description": "Development server"
+            "description": "Development server (HTTP)"
+        },
+        {
+            "url": "https://localhost:3000",
+            "description": "Development server (HTTPS)"
         }
     ],
     "paths": {
@@ -160,6 +164,123 @@
                     },
                     "404": {
                         "description": "Branch not found"
+                    }
+                }
+            }
+        },
+        "/api/cart": {
+            "get": {
+                "summary": "Read the current demo cart",
+                "tags": [
+                    "Cart"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The current cart with server-calculated prices and totals",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Cart"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "Batch-update item quantities and coupon",
+                "tags": [
+                    "Cart"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateCartRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated cart",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Cart"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Unknown product, invalid quantity, malformed product ID, or invalid coupon"
+                    }
+                }
+            }
+        },
+        "/api/cart/items": {
+            "post": {
+                "summary": "Add a product quantity to the cart, merging with any existing quantity",
+                "tags": [
+                    "Cart"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AddCartItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Updated cart",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Cart"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Unknown product, malformed product ID, or invalid quantity"
+                    }
+                }
+            }
+        },
+        "/api/cart/items/{productId}": {
+            "delete": {
+                "summary": "Remove a product from the cart",
+                "tags": [
+                    "Cart"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated cart",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Cart"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Unknown product or malformed product ID"
                     }
                 }
             }
@@ -1266,6 +1387,161 @@
                     }
                 }
             },
+            "CartItem": {
+                "type": "object",
+                "required": [
+                    "productId",
+                    "name",
+                    "sku",
+                    "unit",
+                    "imgName",
+                    "quantity",
+                    "originalPrice",
+                    "unitPrice",
+                    "lineTotal"
+                ],
+                "properties": {
+                    "productId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sku": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "imgName": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 99
+                    },
+                    "originalPrice": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Catalog price before product discount."
+                    },
+                    "discount": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Product discount as a decimal, when present."
+                    },
+                    "unitPrice": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Effective unit price, price * (1 - discount), rounded to cents."
+                    },
+                    "lineTotal": {
+                        "type": "number",
+                        "format": "float"
+                    }
+                }
+            },
+            "CartTotals": {
+                "type": "object",
+                "required": [
+                    "subtotal",
+                    "couponDiscount",
+                    "shipping",
+                    "grandTotal"
+                ],
+                "properties": {
+                    "subtotal": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "couponCode": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "SAVE5 applies a 5% subtotal discount; blank or null removes the coupon."
+                    },
+                    "couponDiscount": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Reference calculation with SAVE5 on $267 subtotal is -$13.35."
+                    },
+                    "shipping": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "$10 for non-empty carts and $0 for empty carts."
+                    },
+                    "grandTotal": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Reference total for $267 subtotal, -$13.35 discount, and $10 shipping is $263.65."
+                    }
+                }
+            },
+            "Cart": {
+                "type": "object",
+                "required": [
+                    "items",
+                    "totals"
+                ],
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CartItem"
+                        }
+                    },
+                    "totals": {
+                        "$ref": "#/components/schemas/CartTotals"
+                    }
+                }
+            },
+            "AddCartItemRequest": {
+                "type": "object",
+                "required": [
+                    "productId",
+                    "quantity"
+                ],
+                "properties": {
+                    "productId": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 99
+                    }
+                }
+            },
+            "UpdateCartRequest": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "productId",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "productId": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 99
+                                }
+                            }
+                        }
+                    },
+                    "couponCode": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "SAVE5 applies 5%; blank or null removes the coupon."
+                    }
+                }
+            },
             "Delivery": {
                 "type": "object",
                 "required": [
@@ -1480,6 +1756,11 @@
                     "stockLevel": {
                         "type": "integer",
                         "description": "Current stock level of the product"
+                    },
+                    "discount": {
+                        "type": "number",
+                        "format": "float",
+                        "description": "Discount percentage (if applicable) expressed as a decimal (e.g., 0.25 for 25%)"
                     }
                 }
             },
@@ -1527,6 +1808,10 @@
         {
             "name": "Branches",
             "description": "API endpoints for managing branches"
+        },
+        {
+            "name": "Cart",
+            "description": "Demo in-memory shopping cart endpoints"
         },
         {
             "name": "Deliveries",
