@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
 
 export default function Navigation() {
   const { isLoggedIn, isAdmin, logout } = useAuth();
+  const { itemCount } = useCart();
   const { darkMode, toggleTheme } = useTheme();
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const cartLabel = itemCount === 0 ? 'Cart, empty' : `Cart, ${itemCount} items`;
 
   return (
     <nav className={`${darkMode ? 'bg-dark/95' : 'bg-white/95'} backdrop-blur-sm fixed w-full z-50 shadow-md transition-colors duration-300`}>
@@ -33,6 +36,7 @@ export default function Navigation() {
               {isAdmin && (
                 <div className="relative">
                   <button 
+                    type="button"
                     onClick={() => setAdminMenuOpen(!adminMenuOpen)}
                     className={`${darkMode ? 'text-light hover:text-primary' : 'text-gray-700 hover:text-primary'} px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors`}
                   >
@@ -68,7 +72,36 @@ export default function Navigation() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            <Link
+              to="/cart"
+              aria-label={cartLabel}
+              className={`${darkMode ? 'text-light hover:text-primary' : 'text-gray-700 hover:text-primary'} relative flex h-10 w-10 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${darkMode ? 'focus:ring-offset-dark' : 'focus:ring-offset-white'}`}
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M3 3h2l2.4 11.2a2 2 0 002 1.6h7.8a2 2 0 001.9-1.4L21 7H6" />
+                <circle cx="10" cy="20" r="1" />
+                <circle cx="18" cy="20" r="1" />
+              </svg>
+              {itemCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-0 top-0 min-w-[1.25rem] -translate-y-1/4 translate-x-1/4 rounded-full bg-primary px-1 text-center text-xs font-bold leading-5 text-white"
+                >
+                  {itemCount}
+                </span>
+              )}
+            </Link>
             <button
+              type="button"
               onClick={toggleTheme}
               className="p-2 rounded-full focus:outline-none transition-colors"
               aria-label="Toggle dark/light mode"
@@ -90,6 +123,7 @@ export default function Navigation() {
                   Welcome!
                 </span>
                 <button 
+                  type="button"
                   onClick={logout}
                   className={`${darkMode ? 'text-light hover:text-primary' : 'text-gray-700 hover:text-primary'} px-3 py-2 rounded-md text-sm font-medium transition-colors`}
                 >
